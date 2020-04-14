@@ -93,7 +93,7 @@ class Pilot:
             'erroTabela': ''
             }
         url = 'https://sistemas.anac.gov.br/consultadelicencas/'
-        post_request = requests.post(url, data=payload, verify=False)
+        post_request = requests.post(url, data=payload, verify=True)
         return BeautifulSoup(post_request.text, 'html.parser')
 
     def __init__(self, canac, cpf):
