@@ -211,3 +211,4 @@ def get_pilot_info(canac, cpf):
     pilot = Pilot(str(canac), str(cpf))
     return pilot
 
+print(get_pilot_info("canac", "cpf"))
