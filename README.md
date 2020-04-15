@@ -1,11 +1,11 @@
 # licencasrequest
-Repositório destinado a captura de informações de licenças e habilitações
+Módulo destinado a captura de informações de licenças, habilitações e certificados médicos.
 
 
-Para obter a resposta, usar a impressão por meio do comando
+Obter os dados, usar as funções:
 
-print(get_pilot_info("canac", "cpf"))
+get_pilot_info("canac", "cpf")
+ou
+get_pilot_info_as_json("canac", "cpf")
 
-ou passar para a variável.
-
-
+O retorno se dá na forma de um objeto (Python/JSON) tipo Pilot. 
