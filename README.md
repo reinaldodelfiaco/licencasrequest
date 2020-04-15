@@ -1,8 +1,8 @@
 # licencasrequest
-Módulo destinado a captura de informações de licenças, habilitações e certificados médicos.
+Módulo destinado a captura de informações de licenças, habilitações, certificados médicos dentre outras publicamente disponíveis.
 
 
-Obter os dados, usar as funções:
+Para obter os dados, usar as funções:
 
 get_pilot_info("canac", "cpf")
 ou
