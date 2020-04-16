@@ -151,6 +151,25 @@ class Pilot:
 
             self.pilotHCs.append(HC(clas, exp_date, clinic, obs))
 
+    def serialize(self):
+        """
+                Função recebe uma instância de objeto tipo Pilot e converte as listas de certificados de saúde (HCs),
+                licenças (Licenses) e habilitações (Habilitations) para um formato serializado, pronto para conversão
+                para JSON.
+                :param self: instância de objeto Pilot
+                """
+        index: int
+        for index in range(len(self.pilotHCs)):
+            self.pilotHCs[index] = self.pilotHCs[index].__dict__
+
+        for index in range(len(self.pilotLicenses)):
+            self.pilotLicenses[index] = self.pilotLicenses[index].__dict__
+
+        for index in range(len(self.pilotHabilitations)):
+            self.pilotHabilitations[index] = self.pilotHabilitations[index].__dict__
+
+        return self.__dict__
+
     def __str__(self):
         """
         :return: str contendo um extrato das informações pessoais do piloto, seus certificados médicos aeronáuticos,
@@ -168,8 +187,8 @@ class Pilot:
         else:
             for index in range(len(self.pilotObs)):
                 string += f'{self.pilotObs[index]}\n'
-            if index == (len(self.pilotObs) - 1):
-                string += '\n'
+                if index == (len(self.pilotObs) - 1):
+                    string += '\n'
         string += '========== Certificados Médico Aeronáutico ===========\n'
         if len(self.pilotHCs) == 0:
             string += '\nNenhum certificado médico disponível\n\n'
@@ -216,26 +235,6 @@ def get_pilot_info(canac, cpf):
     return Pilot(str(canac), str(cpf))
 
 
-def serialize_pilot_info(pilot_object: Pilot):
-    """
-    Função recebe uma instância de objeto tipo Pilot e converte as listas de certificados de saúde (HCs),
-    licenças (Licenses) e habilitações (Habilitations) para um formato serializado, pronto para conversão para JSON.
-    :param pilot_object: instância de objeto Pilot
-    :return: Objeto tipo Pilot com as listas de objetos serializadas.
-    """
-    index: int
-    for index in range(len(pilot_object.pilotHCs)):
-        pilot_object.pilotHCs[index] = pilot_object.pilotHCs[index].__dict__
-
-    for index in range(len(pilot_object.pilotLicenses)):
-        pilot_object.pilotLicenses[index] = pilot_object.pilotLicenses[index].__dict__
-
-    for index in range(len(pilot_object.pilotHabilitations)):
-        pilot_object.pilotHabilitations[index] = pilot_object.pilotHabilitations[index].__dict__
-
-    return pilot_object
-
-
 def get_pilot_info_as_json(canac, cpf):
     """
     Função recebe as informações de CANAC e CPF do piloto a ser pesquisado, efetua uma pesquisa no site de consultas
@@ -244,10 +243,9 @@ def get_pilot_info_as_json(canac, cpf):
     :param cpf: string contendo o CPF do piloto a ser pesquisado.
     :return: objeto tipo Pilot em formato JSON.
     """
-    pilot_info = serialize_pilot_info(get_pilot_info(canac, cpf))
-
     def default_serializer_behaviour(instance):
         if isinstance(instance, (datetime.date, datetime.datetime)):
             return instance.isoformat()
 
-    return json.dumps(pilot_info.__dict__, indent=4, default=default_serializer_behaviour, ensure_ascii=False)
+    return json.dumps(get_pilot_info(canac, cpf).serialize(),
+                      indent=4, default=default_serializer_behaviour, ensure_ascii=False)
