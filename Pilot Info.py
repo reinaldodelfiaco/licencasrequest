@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import json
 import requests
 import datetime
 
@@ -81,7 +82,8 @@ class HC:
 
 
 class Pilot:
-    def getsoup(self, canac, cpf):
+    @staticmethod
+    def get_soup(canac, cpf):
         payload = {
             'txtCodAnac': '',
             'IDIOMA': 'P',
@@ -97,7 +99,7 @@ class Pilot:
         return BeautifulSoup(post_request.text, 'html.parser')
 
     def __init__(self, canac, cpf):
-        soup = self.getsoup(canac, cpf)
+        soup = self.get_soup(canac, cpf)
         tables = soup.find_all('table')
 
         pilot_data = tables[7].find_all('td')
@@ -106,27 +108,23 @@ class Pilot:
         hc_table = tables[11].find_all('td')
 
         self.UpdateTime = datetime.datetime.strptime(tables[16].find_all('td')[0].string[21:], '%d/%m/%Y %H:%M:%S')
-        del(soup, tables)
+        self.pilotName = pilot_data[3].string.strip().title()
+        self.pilotCANAC = pilot_data[7].string
+        self.pilotDOB = datetime.date(int(pilot_data[5].string[-4:]), int(pilot_data[5].string[3:5]),
+                                      int(pilot_data[5].string[0:2]))
+        self.pilotBloodType = hc_table[-1].string.strip()[7:]
+        self.pilotEmployer = pilot_data[9].string
 
+        self.pilotObs = []
         self.pilotHabilitations = []
         self.pilotLicenses = []
         self.pilotHCs = []
 
-        self.pilotName = pilot_data[3].string.title()
-        self.pilotDOB = datetime.date(int(pilot_data[5].string[-4:]), int(pilot_data[5].string[3:5]),
-                                      int(pilot_data[5].string[0:2]))
-        self.pilotCANAC = pilot_data[7].string
-        self.pilotEmployer = pilot_data[9].string
-        self.pilotBloodType = hc_table[-1].string.lstrip().rstrip()[7:]
-        self.pilotObs = ''
-        
         for obs in pilot_data[11].text.split('\r\n'):
-            if obs.lstrip().rstrip() != '' and '$' not in obs:
-                self.pilotObs += f'{obs.lstrip().rstrip()}, '
+            if obs.strip() != '' and '$' not in obs:
+                self.pilotObs.append(obs.strip().strip('.'))
             elif '$' in obs:
                 break
-        if self.pilotObs[-2:] == ', ':
-            self.pilotObs = self.pilotObs[:-2]
 
         for i in range(((len(abilities_table) - 5) // 4)):
             typ = abilities_table[(5 + 4 * i)].string
@@ -149,7 +147,7 @@ class Pilot:
             ed = hc_table[(6 + 4 * i)].string
             exp_date = datetime.date(int(ed[-4:]), int(ed[3:5]), int(ed[:2]))
             clinic = hc_table[(7 + 4 * i)].string
-            obs = hc_table[(8 + 4 * i)].string.lstrip().rstrip()
+            obs = hc_table[(8 + 4 * i)].string.strip().strip('.')
 
             self.pilotHCs.append(HC(clas, exp_date, clinic, obs))
 
@@ -164,7 +162,14 @@ class Pilot:
         string += f'Grupo sanguíneo: {self.pilotBloodType}\n\n'
         string += f'Código ANAC: {self.pilotCANAC}\n'
         string += f'Empresa: {self.pilotEmployer}\n\n'
-        string += f'Observações: {self.pilotObs}\n\n'
+        string += '==================== Observações =====================\n'
+        if len(self.pilotObs) == 0:
+            string += '\nNenhuma observação disponível\n\n'
+        else:
+            for index in range(len(self.pilotObs)):
+                string += f'{self.pilotObs[index]}\n'
+            if index == (len(self.pilotObs) - 1):
+                string += '\n'
         string += '========== Certificados Médico Aeronáutico ===========\n'
         if len(self.pilotHCs) == 0:
             string += '\nNenhum certificado médico disponível\n\n'
@@ -208,5 +213,41 @@ def get_pilot_info(canac, cpf):
     :return: Retorna uma instância do objeto tipo Pilot contendo todas as informações disponíveis no site de consultas
             da ANAC.
     """
-    pilot = Pilot(str(canac), str(cpf))
-    return pilot
+    return Pilot(str(canac), str(cpf))
+
+
+def serialize_pilot_info(pilot_object: Pilot):
+    """
+    Função recebe uma instância de objeto tipo Pilot e converte as listas de certificados de saúde (HCs),
+    licenças (Licenses) e habilitações (Habilitations) para um formato serializado, pronto para conversão para JSON.
+    :param pilot_object: instância de objeto Pilot
+    :return: Objeto tipo Pilot com as listas de objetos serializadas.
+    """
+    index: int
+    for index in range(len(pilot_object.pilotHCs)):
+        pilot_object.pilotHCs[index] = pilot_object.pilotHCs[index].__dict__
+
+    for index in range(len(pilot_object.pilotLicenses)):
+        pilot_object.pilotLicenses[index] = pilot_object.pilotLicenses[index].__dict__
+
+    for index in range(len(pilot_object.pilotHabilitations)):
+        pilot_object.pilotHabilitations[index] = pilot_object.pilotHabilitations[index].__dict__
+
+    return pilot_object
+
+
+def get_pilot_info_as_json(canac, cpf):
+    """
+    Função recebe as informações de CANAC e CPF do piloto a ser pesquisado, efetua uma pesquisa no site de consultas
+    da ANAC e retorna um objeto tipo Pilot com todas as informações publicamentes disponíveis em formato JSON.
+    :param canac: string contendo o Código ANAC do piloto a ser pesquisado.
+    :param cpf: string contendo o CPF do piloto a ser pesquisado.
+    :return: objeto tipo Pilot em formato JSON.
+    """
+    pilot_info = serialize_pilot_info(get_pilot_info(canac, cpf))
+
+    def default_serializer_behaviour(instance):
+        if isinstance(instance, (datetime.date, datetime.datetime)):
+            return instance.isoformat()
+
+    return json.dumps(pilot_info.__dict__, indent=4, default=default_serializer_behaviour, ensure_ascii=False)
